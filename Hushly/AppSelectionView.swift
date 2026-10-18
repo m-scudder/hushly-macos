@@ -12,7 +12,7 @@ struct AppSelectionView: View {
                 Spacer()
                 Text(privacy.isCloaked ? "MEETING MODE" : "READY")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(privacy.isCloaked ? .orange : .secondary)
+                    .foregroundColor(privacy.isCloaked ? .orange : .secondary)
             }
 
             Text("Hide personal app windows before sharing your screen.")
