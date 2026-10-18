@@ -5,101 +5,161 @@ struct AppSelectionView: View {
     @EnvironmentObject private var privacy: PrivacyController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("Hushly", systemImage: "eye.slash")
-                    .font(.title3.bold())
-                Spacer()
-                Text(privacy.isCloaked ? "MEETING MODE" : "READY")
-                    .font(.caption2.weight(.bold))
-                    .foregroundColor(privacy.isCloaked ? .orange : .secondary)
-            }
-
-            Text("Hide personal app windows before sharing your screen.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            HStack {
-                Text("Protected running apps")
-                    .font(.headline)
-                Spacer()
-                Button {
-                    privacy.refreshRunningApps()
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .help("Refresh running applications")
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            Divider().padding(.vertical, 12)
+            appHeader
 
             ScrollView {
-                LazyVStack(spacing: 3) {
+                LazyVStack(spacing: 0) {
                     ForEach(privacy.runningApps, id: \.processIdentifier) { app in
                         if let identifier = app.bundleIdentifier {
-                            Toggle(isOn: Binding(
-                                get: { privacy.protectedIDs.contains(identifier) },
-                                set: { _ in privacy.toggleProtection(identifier) }
-                            )) {
-                                HStack(spacing: 8) {
-                                    Image(nsImage: app.icon ?? NSImage())
-                                        .resizable()
-                                        .frame(width: 21, height: 21)
-                                    Text(app.localizedName ?? identifier)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .toggleStyle(.checkbox)
-                            if privacy.isCloaked && privacy.protectedIDs.contains(identifier) {
-                                Button(privacy.temporarilyVisibleIDs.contains(identifier) ? "Hide again" : "Show") {
-                                    if privacy.temporarilyVisibleIDs.contains(identifier) {
-                                        privacy.hideAgain(identifier)
-                                    } else {
-                                        privacy.revealTemporarily(identifier)
-                                    }
-                                }
-                                .font(.caption)
-                                .help("Temporarily allow this app during meeting mode")
-                            }
-                            Divider()
-                                .opacity(0.35)
+                            appRow(app, id: identifier)
                         }
                     }
                 }
             }
-            .frame(height: 190)
+            .frame(height: min(CGFloat(privacy.runningApps.count) * 42, 246))
+            .padding(.top, 5)
 
+            Divider().padding(.vertical, 12)
+            actionArea
+            Divider().padding(.vertical, 12)
+            footer
+        }
+        .padding(16)
+        .frame(width: 360)
+    }
+
+    private var header: some View {
+        HStack(spacing: 9) {
+            Image(systemName: "eye.slash")
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 26)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Hushly").font(.headline)
+                Text("Keep personal apps out of meetings")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Text(privacy.isCloaked ? "HIDDEN" : "READY")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(privacy.isCloaked ? Color.orange : Color.secondary)
+        }
+    }
+
+    private var appHeader: some View {
+        HStack {
+            Text("APPS")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text("\(privacy.protectedIDs.count) selected")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Spacer()
+            Button {
+                privacy.refreshRunningApps()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 12))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Refresh running apps")
+        }
+    }
+
+    private func appRow(_ app: NSRunningApplication, id: String) -> some View {
+        let selected = privacy.protectedIDs.contains(id)
+        let visible = privacy.temporarilyVisibleIDs.contains(id)
+
+        return HStack(spacing: 10) {
+            Toggle("", isOn: Binding(
+                get: { privacy.protectedIDs.contains(id) },
+                set: { _ in privacy.toggleProtection(id) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .frame(width: 18)
+
+            Image(nsImage: app.icon ?? NSImage())
+                .resizable()
+                .scaledToFit()
+                .frame(width: 22, height: 22)
+
+            Text(app.localizedName ?? id)
+                .font(.system(size: 13))
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            Spacer(minLength: 4)
+
+            if privacy.isCloaked && selected {
+                Button(visible ? "Hide again" : "Show") {
+                    if visible {
+                        privacy.hideAgain(id)
+                    } else {
+                        privacy.revealTemporarily(id)
+                    }
+                }
+                .font(.caption)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help(visible ? "Hide this app again" : "Temporarily show this app")
+            }
+        }
+        .frame(height: 40)
+        .contentShape(Rectangle())
+    }
+
+    private var actionArea: some View {
+        VStack(alignment: .leading, spacing: 8) {
             Button {
                 privacy.toggleMeetingMode()
             } label: {
-                Label(privacy.isCloaked ? "Restore with Touch ID / password" : "Hide protected apps",
-                      systemImage: privacy.isCloaked ? "lock.open" : "eye.slash")
-                    .frame(maxWidth: .infinity)
+                Label(
+                    privacy.isCloaked ? "Restore protected apps" : "Hide protected apps",
+                    systemImage: privacy.isCloaked ? "lock.open" : "eye.slash"
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 24)
             }
             .buttonStyle(.borderedProminent)
             .keyboardShortcut(.return, modifiers: [])
 
-            Text("Shortcut: ⌃⌥⌘H  •  \(privacy.protectedIDs.count) selected")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if privacy.isCloaked && !privacy.temporarilyVisibleIDs.isEmpty {
-                Text("\(privacy.temporarilyVisibleIDs.count) app(s) temporarily visible during meeting mode")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.orange)
+            HStack {
+                Text("Shortcut")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("⌃ ⌥ ⌘ H")
+                    .monospaced()
             }
+            .font(.caption)
+
+            if privacy.isCloaked && !privacy.temporarilyVisibleIDs.isEmpty {
+                Label("\(privacy.temporarilyVisibleIDs.count) temporarily visible", systemImage: "eye")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+
             Text(privacy.status)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-
-            Divider()
-            HStack {
-                Text("Prototype • Windows only")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                Spacer()
-                Button("Quit") { NSApplication.shared.terminate(nil) }
-            }
         }
-        .padding(16)
-        .frame(width: 360)
+    }
+
+    private var footer: some View {
+        HStack {
+            Text("Window-hiding prototype")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+            Spacer()
+            Button("Quit") { NSApplication.shared.terminate(nil) }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
