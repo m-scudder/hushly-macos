@@ -48,7 +48,19 @@ struct AppSelectionView: View {
                                 }
                             }
                             .toggleStyle(.checkbox)
-                            .padding(.vertical, 4)
+                            if privacy.isCloaked && privacy.protectedIDs.contains(identifier) {
+                                Button(privacy.temporarilyVisibleIDs.contains(identifier) ? "Hide again" : "Show") {
+                                    if privacy.temporarilyVisibleIDs.contains(identifier) {
+                                        privacy.hideAgain(identifier)
+                                    } else {
+                                        privacy.revealTemporarily(identifier)
+                                    }
+                                }
+                                .font(.caption)
+                                .help("Temporarily allow this app during meeting mode")
+                            }
+                            Divider()
+                                .opacity(0.35)
                         }
                     }
                 }
@@ -68,6 +80,11 @@ struct AppSelectionView: View {
             Text("Shortcut: ⌃⌥⌘H  •  \(privacy.protectedIDs.count) selected")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            if privacy.isCloaked && !privacy.temporarilyVisibleIDs.isEmpty {
+                Text("\(privacy.temporarilyVisibleIDs.count) app(s) temporarily visible during meeting mode")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.orange)
+            }
             Text(privacy.status)
                 .font(.caption)
                 .foregroundStyle(.secondary)
