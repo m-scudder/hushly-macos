@@ -1,5 +1,6 @@
 import AppKit
 import LocalAuthentication
+import UniformTypeIdentifiers
 
 struct ProtectedApp: Identifiable {
     let id: String
@@ -72,7 +73,7 @@ final class PrivacyController: ObservableObject {
         let panel = NSOpenPanel()
         panel.title = "Choose applications to protect"
         panel.message = "Select one or more .app bundles."
-        panel.allowedContentTypes = [.applicationBundle]
+        panel.allowedContentTypes = [UTType.applicationBundle]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
