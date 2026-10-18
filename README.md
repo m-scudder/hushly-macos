@@ -7,7 +7,7 @@ Hushly is an experimental **macOS menu-bar app** that hides selected personal ap
 - Select currently running applications to protect; selection persists locally.
 - Press **Control + Option + Command + H** to cloak protected app windows.
 - Keep the apps running; periodically re-hide protected windows if they reappear.
-- Press the shortcut again, or use the menu bar, to restore with macOS device-owner authentication (Touch ID or account password).
+- While cloaked, use **Show** next to a protected running app in the Hushly menu to temporarily allow its windows on screen; select **Hide again** to resume protecting it. Other apps stay cloaked. This exception resets when meeting mode ends.\n- Press the shortcut again, or use the menu bar, to restore with macOS device-owner authentication (Touch ID or account password).
 - No accounts, cloud sync, keylogger, elevated privileges, or Accessibility permission.
 
 ## Build
