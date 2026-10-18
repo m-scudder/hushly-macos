@@ -9,6 +9,7 @@ final class PrivacyController: ObservableObject {
         didSet { UserDefaults.standard.set(Array(protectedIDs), forKey: Self.defaultsKey) }
     }
     @Published private(set) var runningApps: [NSRunningApplication] = []
+    @Published private(set) var temporarilyVisibleIDs: Set<String> = []
 
     private static let defaultsKey = "protectedBundleIdentifiers"
     private var enforcementTimer: Timer?
@@ -46,7 +47,28 @@ final class PrivacyController: ObservableObject {
         } else {
             protectedIDs.insert(id)
         }
+        // Unprotected apps are no longer subject to the meeting-mode guard.
+        temporarilyVisibleIDs.remove(id)
         if isCloaked { enforceHiddenIfNeeded() }
+    }
+
+    /// Explicitly allow one protected app on screen while other protected apps stay hidden.
+    /// The exception only lasts for the current meeting-mode session.
+    func revealTemporarily(_ id: String) {
+        guard isCloaked, protectedIDs.contains(id) else { return }
+        temporarilyVisibleIDs.insert(id)
+        for app in NSWorkspace.shared.runningApplications where app.bundleIdentifier == id {
+            _ = app.unhide()
+            _ = app.activate(options: [.activateIgnoringOtherApps])
+        }
+        status = "Allowed this app on screen. Hide it again before sharing private content."
+    }
+
+    func hideAgain(_ id: String) {
+        guard isCloaked, protectedIDs.contains(id) else { return }
+        temporarilyVisibleIDs.remove(id)
+        enforceHiddenIfNeeded()
+        status = "App protected again."
     }
 
     func toggleMeetingMode() {
@@ -62,6 +84,7 @@ final class PrivacyController: ObservableObject {
             status = "Select at least one app first."
             return
         }
+        temporarilyVisibleIDs.removeAll()
         isCloaked = true
         enforceHiddenIfNeeded()
         enforcementTimer?.invalidate()
@@ -103,6 +126,7 @@ final class PrivacyController: ObservableObject {
         enforcementTimer?.invalidate()
         enforcementTimer = nil
         isCloaked = false
+        temporarilyVisibleIDs.removeAll()
         for app in NSWorkspace.shared.runningApplications {
             if let id = app.bundleIdentifier, protectedIDs.contains(id) {
                 _ = app.unhide()
